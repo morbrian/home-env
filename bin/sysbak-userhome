@@ -1,0 +1,60 @@
+#!/bin/bash
+
+#
+# script to perform backup of a user home directory
+# Parameters:
+#   USERNAME - the username of the user whose home should be backed up
+#
+# author: morbrian@me.com
+#
+# inspired by: http://webgnuru.com/linux/rsync_incremental.php
+#
+
+USERNAME=$1
+if [ -z ${USERNAME+x} ]; then echo "ERROR: USERNAME not specified as first parameter"; exit 1; fi
+
+check_exists(){
+    if [ ! -d "$1" ]; then echo "ERROR: directory $1 does not exist"; exit 1; fi
+}
+
+KEEP_DAYS=30
+
+NOW=`date +%Y-%m-%d-%H.%M.%S`
+
+# the dir we want to backkup
+SRC_DIR="/home/$USERNAME"
+check_exists $SRC_DIR
+ 
+# the baseline target area where we store backups
+SYSBAK_DIR="/d1/sysbak"
+check_exists $SYSBAK_DIR
+
+# the user backup storage area
+USER_ARCH_DIR="$SYSBAK_DIR/users/$USERNAME"
+check_exists $USER_ARCH_DIR
+
+# target dir
+MOMENT0=$NOW
+TRG_DIR="$USER_ARCH_DIR/$MOMENT0"
+
+# history file
+SYSBAK_HISTORY="$USER_ARCH_DIR/sysbak.history"
+if [ ! -f "$SYSBAK_HISTORY" ]; then echo "Creating empty $SYSBAK_HISTORY"; echo >> $SYSBAK_HISTORY; fi
+ 
+# get tag indicator for last completed backup
+MOMENT1=`tail -1 $SYSBAK_HISTORY` 
+ 
+#The link destination directory:
+LNK_DIR="$USER_ARCH_DIR/$MOMENT1"
+ 
+#The rsync options:
+OPT="-avh --delete --link-dest=$LNK_DIR"
+ 
+#Execute the backup
+rsync $OPT $SRC_DIR $TRG_DIR
+
+# record completed backup
+echo $MOMENT0 >> "$SYSBAK_HISTORY"
+
+# delete old stuff (30 days)
+find "$USER_ARCH_DIR" -maxdepth 1 -name "[0-9][0-9][0-9][0-9]-*" -type d -ctime +$KEEP_DAYS -exec rm -Rf {} \; -exec echo removed {} \;

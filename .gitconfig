@@ -1,0 +1,9 @@
+[user]
+	name = Brian Moriartty
+	email = morbrian@me.com
+[credential]
+	helper = cache --timeout=2592000
+[core]
+	editor = vim
+[push]
+	default = simple
